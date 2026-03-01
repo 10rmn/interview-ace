@@ -12,33 +12,34 @@ const app = express();
 app.set('trust proxy', 1);
 
 /**
- * Middleware
+ * CORS Configuration
+ * Allow only your frontend URL
  */
-const corsOriginEnv = process.env.CORS_ORIGIN;
-const allowAllInDev = (process.env.NODE_ENV || 'development') === 'development' && !corsOriginEnv;
-const allowedOrigins = corsOriginEnv
-  ? corsOriginEnv
-      .split(',')
-      .map((o) => o.trim())
-      .filter(Boolean)
-  : [];
+const allowedOrigins = [
+  "https://interview-ace-1-cq3c.onrender.com"
+];
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowAllInDev) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true); // allow Postman / direct requests
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("Not allowed by CORS"));
+      }
     },
     credentials: true,
   })
 );
 
+/**
+ * Body Parsers
+ */
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Apply general rate limiter to all routes
+// Apply general rate limiter
 app.use(generalLimiter);
 
 /**
@@ -47,12 +48,13 @@ app.use(generalLimiter);
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(
-      process.env.MONGODB_URI || 'mongodb://localhost:27017/ai-interview-simulator',
+      process.env.MONGODB_URI,
       {
         useNewUrlParser: true,
         useUnifiedTopology: true,
       }
     );
+
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error('Database connection error:', error.message);
@@ -63,7 +65,7 @@ const connectDB = async () => {
 connectDB();
 
 /**
- * Routes
+ * Health Route
  */
 app.get('/api/health', (req, res) => {
   res.status(200).json({
@@ -73,6 +75,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+/**
+ * Routes
+ */
 app.use('/api/auth', authRoutes);
 app.use('/api/interview', interviewRoutes);
 
@@ -87,7 +92,7 @@ app.use((req, res) => {
 });
 
 /**
- * Error Handler (Must be last)
+ * Global Error Handler
  */
 app.use(errorHandler);
 
@@ -95,6 +100,7 @@ app.use(errorHandler);
  * Start Server
  */
 const PORT = process.env.PORT || 5000;
+
 const server = app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
