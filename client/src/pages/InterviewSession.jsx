@@ -4,6 +4,8 @@ import interviewService from '../services/interviewService';
 import authService from '../services/authService';
 import AnswerInput from '../components/AnswerInput';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
 const InterviewSession = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
@@ -170,7 +172,7 @@ const InterviewSession = () => {
         {/* Answer Section */}
         {!feedback && (
           <AnswerInput
-            submitUrl="/api/interview/answer"
+            submitUrl={`${API_BASE_URL}/interview/answer`}
             token={authService.getToken()}
             initialValue={answer}
             disabled={loading}
